@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import confusion_matrix
 
 st.title('IFSC ML IDS')
 st.write("Software para detectar tentativas de instrusão usando Machine Learning através de um modelo")
@@ -27,7 +28,6 @@ if file_buffer is not None:
         2:'ips2',
         3:'ips3'
     }, inplace = True )
-    colIpsSrc
     previsores = logs[['destination.port', 'source.port', 'pf.packet.length', 'network.transport', 'pf.ipv4.ttl','event.action']]
 
     previsores = previsores.join(colIpsDest)
@@ -47,4 +47,10 @@ if file_buffer is not None:
     # Faz a previsão a partir do modelo criado 
     result = modelo.predict(previsores)
 
-    st.write(result)
+    confusao = confusion_matrix(classe, result)
+    confusao
+    fppf = previsores[(classe != result.T).T]
+    fppf['destination.ip'] = fppf['ipd0'].map(str) + '.' + fppf['ipd1'].map(str) + '.' + fppf['ipd2'].map(str) + '.' + fppf['ipd3'].map(str)
+    fppf['source.ip'] = fppf['ips0'].map(str) + '.' + fppf['ips1'].map(str) + '.' + fppf['ips2'].map(str) + '.' + fppf['ips3'].map(str)
+    fppf = fppf.drop(columns=['ipd0','ipd1','ipd2','ipd3','ips0','ips1','ips2','ips3'])
+    fppf
