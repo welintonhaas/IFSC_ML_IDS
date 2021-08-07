@@ -34,23 +34,34 @@ if file_buffer is not None:
     previsores = previsores.join(colIpsSrc)
 
     previsores = previsores.dropna()
+    previsores = previsores[previsores['destination.port']!='-']
+    previsores = previsores[previsores['source.port']!='-']
+
     classe = previsores['event.action']
     previsores = previsores.drop(columns='event.action')
 
     # Conversão de strings em números
-    labelencoder0 = LabelEncoder()
-    previsores["network.transport"] = labelencoder0.fit_transform(previsores["network.transport"])
+    labelencoder = LabelEncoder()
+    previsores["network.transport"] = labelencoder.fit_transform(previsores["network.transport"])
 
-    # Carrega o modelo 
+    # Carrega o modelo
     modelo = pickle.load(open('../model/modelo.sav', 'rb'))
 
-    # Faz a previsão a partir do modelo criado 
+    # Faz a previsão a partir do modelo criado
     result = modelo.predict(previsores)
 
     confusao = confusion_matrix(classe, result)
     confusao
-    fppf = previsores[(classe != result.T).T]
+
+    fppf = previsores.copy()
+    fppf['classe-action'] = classe
+    fppf['classe-modelo'] = result
+
+    fppf = fppf[(classe != result.T).T]
+
     fppf['destination.ip'] = fppf['ipd0'].map(str) + '.' + fppf['ipd1'].map(str) + '.' + fppf['ipd2'].map(str) + '.' + fppf['ipd3'].map(str)
     fppf['source.ip'] = fppf['ips0'].map(str) + '.' + fppf['ips1'].map(str) + '.' + fppf['ips2'].map(str) + '.' + fppf['ips3'].map(str)
-    fppf = fppf.drop(columns=['ipd0','ipd1','ipd2','ipd3','ips0','ips1','ips2','ips3'])
+    fppf = fppf.drop(columns=['ipd0','ipd1','ipd2','ipd3','ips0','ips1','ips2','ips3','pf.ipv4.ttl','network.transport', 'pf.packet.length','source.port'])
+    fppf = fppf.rename({'destination.port':'port'},axis = 1)
+    fppf = fppf[['source.ip','destination.ip','port','classe-action','classe-modelo']]
     fppf
